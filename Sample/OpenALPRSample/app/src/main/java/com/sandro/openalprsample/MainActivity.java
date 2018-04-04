@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int STORAGE=1;
     private String ANDROID_DATA_DIR;
     private static File destination;
+    private TextView infoTextView;
     private TextView resultTextView;
     private TextView whereToProcessTextView;
     private ImageView imageView;
@@ -68,18 +69,20 @@ public class MainActivity extends AppCompatActivity {
 
         ANDROID_DATA_DIR = this.getApplicationInfo().dataDir;
 
-        resultTextView = (TextView) findViewById(R.id.textView);
+        infoTextView = (TextView) findViewById(R.id.textView);
         whereToProcessTextView = (TextView) findViewById(R.id.textView_where_to_process);
         imageView = (ImageView) findViewById(R.id.imageView);
+        resultTextView = (TextView) findViewById(R.id.resultTextView);
 
         Utils.copyAssetFolder(MainActivity.this.getAssets(), "runtime_data", ANDROID_DATA_DIR + File.separatorChar + "runtime_data");
 
-        resultTextView.setText("Press the button below to start a request.");
+        infoTextView.setText("Press the button below to start a request.");
         whereToProcessTextView.setText(Configuration.getWhereToProcess());
 
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                resultTextView.setText("");
                 checkPermission();
             }
         });
@@ -110,12 +113,13 @@ public class MainActivity extends AppCompatActivity {
                 final ProgressDialog progress
                         = ProgressDialog.show(this, "Loading", "Parsing result...", true);
                 BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inSampleSize = 4;
+                options.inSampleSize = 10;
 
                 // Picasso requires permission.WRITE_EXTERNAL_STORAGE
-                Picasso.with(MainActivity.this).load(destination).fit().centerCrop().into(imageView);
+                Picasso.with(MainActivity.this).load(destination).placeholder(R.mipmap.ic_launcher)
+                        .error(R.mipmap.ic_launcher).fit().centerCrop().into(imageView);
                 resultTextView.setMovementMethod(new ScrollingMovementMethod());
-                resultTextView.setText("Processing");
+                infoTextView.setText("Processing");
 
                 AsyncTask.execute(new Runnable() {
                     @Override
@@ -153,12 +157,12 @@ public class MainActivity extends AppCompatActivity {
                                         Toast.makeText(MainActivity.this, "It was not possible to detect the licence plate.", Toast.LENGTH_LONG).show();
                                         resultTextView.setText("It was not possible to detect the licence plate.");
                                     } else {
-                                        String textToShow = " Processing time within API: " + String.format("%.2f", ((results.getProcessingTimeMs() / 1000.0) % 60)) + " seconds\n";
+                                        String textToShow = "";
                                         textToShow += "Total processing time: " + String.format("%.2f", ((elapsedTime/1000.0)%60)) + " seconds\n";
                                         textToShow += "Image resize time: " + String.format("%.2f", ((resizeElapsedTime/1000.0)%60)) + " seconds\n";
                                         textToShow += "File upload time: " + String.format("%.2f", ((SapphireAccess.fileUploadTime/1000.0)%60)) + " seconds\n";
-                                        textToShow += "Native function call time: " + String.format("%.2f", ((SapphireAccess.processingTime/1000.0)%60)) + " seconds\n";
-                                        textToShow += "Number of plates found: " + results.getResults().size() +"\n";
+                                        textToShow += "Running algorithm time: " + String.format("%.2f", ((SapphireAccess.processingTime/1000.0)%60)) + " seconds\n";
+                                        textToShow += "Number of plates found: " + results.getResults().size() +"\n\n";
 
                                         for (Result result : results.getResults()) {
                                             textToShow += "Plate: " + result.getPlate()
@@ -166,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
                                         }
 
                                         resultTextView.setText(textToShow);
+                                        infoTextView.setText("Press the button below to start a request.");
                                     }
                                 }
                             });
@@ -176,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    resultTextView.setText(resultsError.getMsg());
+                                    infoTextView.setText(resultsError.getMsg());
                                 }
                             });
                         } catch (Exception e) {
